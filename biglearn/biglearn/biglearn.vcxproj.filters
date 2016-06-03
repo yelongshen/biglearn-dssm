@@ -1,0 +1,98 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Cuda">
+      <UniqueIdentifier>{e16caae3-4764-4dcf-8189-eb4adfb413e7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data">
+      <UniqueIdentifier>{db71b790-1fb6-4668-8236-49ae4c88289d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ComputeLib">
+      <UniqueIdentifier>{9b91e83e-7579-44e9-9ec4-a8a92312a274}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Runner">
+      <UniqueIdentifier>{c2076655-8ea4-404d-bb29-095134bccd05}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Util">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\PieceMem.cpp">
+      <Filter>Data</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sparseMatrixData.cpp">
+      <Filter>Data</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\denseMatrixData.cpp">
+      <Filter>Data</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\util.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\vocab.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\util.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\vocab.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cudaCompute.h">
+      <Filter>Cuda</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mathOperationManager.h">
+      <Filter>ComputeLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cudaOperationManager.h">
+      <Filter>ComputeLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fullyConnectedLayer.h">
+      <Filter>Runner</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sparseMatrixData.h">
+      <Filter>Data</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\PieceMem.h">
+      <Filter>Data</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\denseMatrixData.h">
+      <Filter>Data</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\BiMatchData.h">
+      <Filter>Data</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\runnerBehavior.h">
+      <Filter>Runner</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\similarityRunner.h">
+      <Filter>Runner</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\softmaxRunner.h">
+      <Filter>Runner</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\hiddenDenseMatrixData.h">
+      <Filter>Data</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="..\..\cudaCompute.cu">
+      <Filter>Cuda</Filter>
+    </CudaCompile>
+  </ItemGroup>
+</Project>
