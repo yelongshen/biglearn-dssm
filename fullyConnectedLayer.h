@@ -26,10 +26,15 @@ public:
 		OutputDim = outputDim;
 		RB = rb;
 		Weight = new PieceMem<float>(InputDim * OutputDim, RB->Device);
-		
 		RB->ComputeLib->RandomVec(Weight, InputDim * OutputDim, sqrtf(6.0f / (inputDim + outputDim)), -sqrtf(6.0f / (inputDim + outputDim)));
 	}
 	
+	FullyConnectedLayer(ifstream & modelReader, RunnerBehavior * rb)
+	{
+		RB = rb;
+		Deserialize(modelReader);
+	}
+
 	void Forward(SparseIndexMatrix * input, DenseMatrix * output)
 	{
 		output->RowSize = input->RowSize;
@@ -74,6 +79,21 @@ public:
 	{
 		RB->ComputeLib->SparseIndexBackward(input->SampleIdx, input->FeatureIdx, doutput->Data,
 			 input->RowSize, InputDim, OutputDim, Weight, 0.0005f);
+	}
+
+	void Serialize(ofstream & modelWriter)
+	{
+		BasicUtil::WriteInt(modelWriter, &InputDim);
+		BasicUtil::WriteInt(modelWriter, &OutputDim);
+		Weight->Serialize(modelWriter);
+	}
+
+	void Deserialize(ifstream & modelReader)
+	{
+		BasicUtil::ReadInt(modelReader, &InputDim);
+		BasicUtil::ReadInt(modelReader, &OutputDim);
+		Weight = new PieceMem<float>(InputDim * OutputDim, RB->Device);
+		Weight->Deserialize(modelReader);
 	}
 
 	~FullyConnectedLayer()

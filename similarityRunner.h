@@ -51,32 +51,10 @@ public:
 		RB->ComputeLib->Scale(doutput->Data, Gamma, MatchData->MatchSize);
 		RB->ComputeLib->Scale(Output->Data, 1.0f/Gamma, MatchData->MatchSize);
 		
-		//Output->Data->QuickWatch();
-		//doutput->Data->QuickWatch();
-
-		//ASquare->QuickWatch();
-		//BSquare->QuickWatch();
-
-
 		RB->ComputeLib->DerivCosineSimilarity(InputA->Data, InputB->Data, ASquare, BSquare, InputA->Stat->MAX_COL_SIZE,
                                               MatchData->Src2MatchIdx, MatchData->Src2MatchElement, MatchData->Tgt2MatchIdx, MatchData->Tgt2MatchElement,
                                               MatchData->SrcIdx, MatchData->TgtIdx, MatchData->SrcSize, MatchData->TgtSize, MatchData->MatchSize, 
 											  Output->Data, doutput->Data, dinputA->Data, dinputB->Data, 0, LARGEEPS);
-
-		//MatchData->SrcIdx->QuickWatch();
-		//MatchData->TgtIdx->QuickWatch();
-		//MatchData->MatchInfo->QuickWatch();
-
-		//MatchData->Src2MatchIdx->QuickWatch();
-		//MatchData->Src2MatchElement->QuickWatch();
-		//MatchData->Tgt2MatchIdx->QuickWatch();
-		//MatchData->Tgt2MatchElement->QuickWatch();
-
-
-		//dinputA->Data->QuickWatch();
-		//dinputB->Data->QuickWatch();
-		//InputA->Data->QuickWatch();
-		//InputB->Data->QuickWatch();
 	}
 
 	~SimilarityRunner()

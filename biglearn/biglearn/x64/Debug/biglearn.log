@@ -1,20 +1,21 @@
-﻿Build started 6/2/2016 8:16:20 PM.
-     1>Project "D:\users\yeshen\windowbox\biglearn\biglearn\biglearn.vcxproj" on node 2 (Build target(s)).
+﻿Build started 6/29/2016 5:44:29 PM.
+     1>Project "D:\users\yeshen\DSSMCPlus\biglearn\biglearn\biglearn.vcxproj" on node 2 (Build target(s)).
      1>ClCompile:
          C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\x86_amd64\CL.exe /c /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include" /Zi /nologo /W3 /WX- /sdl /Od /D _CRT_SECURE_NO_WARNINGS /D _MBCS /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Debug\\" /Fd"x64\Debug\vc110.pdb" /Gd /TP /errorReport:prompt ..\..\main.cpp
          main.cpp
-     1>..\..\main.cpp(73): warning C4267: 'initializing' : conversion from 'size_t' to 'int', possible loss of data
+     1>..\..\main.cpp(79): warning C4267: 'initializing' : conversion from 'size_t' to 'int', possible loss of data
+     1>..\..\main.cpp(246): warning C4267: 'initializing' : conversion from 'size_t' to 'int', possible loss of data
        Link:
-         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\x86_amd64\link.exe /ERRORREPORT:PROMPT /OUT:"D:\users\yeshen\windowbox\biglearn\x64\Debug\biglearn.exe" /INCREMENTAL /NOLOGO /LIBPATH:"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\lib\x64" kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:\users\yeshen\windowbox\biglearn\x64\Debug\biglearn.pdb" /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\users\yeshen\windowbox\biglearn\x64\Debug\biglearn.lib" /MACHINE:X64 x64\Debug\cudaCompute.cu.obj
+         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\x86_amd64\link.exe /ERRORREPORT:PROMPT /OUT:"D:\users\yeshen\DSSMCPlus\biglearn\x64\Debug\biglearn.exe" /INCREMENTAL /NOLOGO /LIBPATH:"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\lib\x64" kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:\users\yeshen\DSSMCPlus\biglearn\x64\Debug\biglearn.pdb" /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\users\yeshen\DSSMCPlus\biglearn\x64\Debug\biglearn.lib" /MACHINE:X64 x64\Debug\cudaCompute.cu.obj
          x64\Debug\PieceMem.obj
          x64\Debug\main.obj
          x64\Debug\sparseMatrixData.obj
          x64\Debug\util.obj
          x64\Debug\vocab.obj
          x64\Debug\denseMatrixData.obj
-         biglearn.vcxproj -> D:\users\yeshen\windowbox\biglearn\x64\Debug\biglearn.exe
-     1>Done Building Project "D:\users\yeshen\windowbox\biglearn\biglearn\biglearn.vcxproj" (Build target(s)).
+         biglearn.vcxproj -> D:\users\yeshen\DSSMCPlus\biglearn\x64\Debug\biglearn.exe
+     1>Done Building Project "D:\users\yeshen\DSSMCPlus\biglearn\biglearn\biglearn.vcxproj" (Build target(s)).
 
 Build succeeded.
 
-Time Elapsed 00:00:02.05
+Time Elapsed 00:00:02.13

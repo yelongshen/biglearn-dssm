@@ -21,7 +21,7 @@
 using namespace std;
 
 void extractBinaryfromStream(const char * inputStream, Vocab & textHash,
-	vector<tuple<int *, int>> & src_batch, vector<tuple<int *, int>> & tgt_batch, int debugLines)
+	vector<tuple<int *, int>> & src_batch, vector<tuple<int *, int>> & tgt_batch, int isFilter, int debugLines)
 {
 	ifstream infile;
 	infile.open(inputStream, ifstream::in);
@@ -50,9 +50,16 @@ void extractBinaryfromStream(const char * inputStream, Vocab & textHash,
 
 		int src_feature_num = src_seg[src_seg_num - 1];
 		int tgt_feature_num = tgt_seg[tgt_seg_num - 1];
-
-		if(src_feature_num <= 0 || tgt_feature_num <= 0) continue;
-
+		
+		if(isFilter == 1)
+		{
+			if(src_feature_num <= 0 || tgt_feature_num <= 0) continue;
+		}
+		else
+		{
+			if(src_feature_num <= 0) src_feature_num = 0;
+			if(tgt_feature_num <= 0) tgt_feature_num = 0;
+		}
 		src_batch.push_back(tuple<int*, int>(src_fea, src_feature_num));
 		tgt_batch.push_back(tuple<int*, int>(tgt_fea, tgt_feature_num));
 
@@ -61,19 +68,18 @@ void extractBinaryfromStream(const char * inputStream, Vocab & textHash,
 	}
 }
 
-
-int main()
+void ModelTrain()
 {
 	Vocab vocab;
 	vocab.LoadVocab("l3g.txt");
 	cout << "vocab Size " << vocab.VocabSize << endl;
 	vector<tuple<int *, int>> src_batch, tgt_batch;
-	extractBinaryfromStream("train_data.tsv", vocab, src_batch, tgt_batch, 0);
+	extractBinaryfromStream("data//train_data_40k.tsv", vocab, src_batch, tgt_batch, 1, 0);
 
 	int sampleSize = src_batch.size();
-	cout << "test sample size" << sampleSize << endl;
+	cout << "train sample size" << sampleSize << endl;
 	
-	int iteration = 200;
+	int iteration = 20;
 	int miniBatchSize = 1024;
 	int featureDim = vocab.VocabSize;
 	int batchNum = sampleSize / miniBatchSize;
@@ -85,7 +91,6 @@ int main()
 	rb.RunMode = RUNMODE_TRAIN;
 	rb.Device = DEVICE_GPU;
 	rb.ComputeLib = new CudaOperationManager(true, true);
-	
 	
 	int hiddenDim1 = 128;
 	int hiddenDim2 = 128;
@@ -191,8 +196,8 @@ int main()
 
 			/// output Loss.
 			float loss = 0;
-			simOutput.Output->Data->QuickWatch();
-			simOutput.Deriv->Data->QuickWatch();
+			//simOutput.Output->Data->QuickWatch();
+			//simOutput.Deriv->Data->QuickWatch();
 			probOutput.Output->Data->QuickWatch();
 			//probOutput.Deriv->Data->QuickWatch();
 			for(int i=0;i< srcBatch.RowSize; i++)
@@ -218,7 +223,140 @@ int main()
 			srcLayer1.Update(srcLayer1Data.Deriv, &srcBatch);
 		}
 		cout<<"iteration : "<<iter + 1<<"\t avg loss :"<<avgLoss<<endl;
+
 	}
 	
+	ofstream modelWriter;
+	modelWriter.open("model//dssm.model", ofstream::binary);
+	srcLayer1.Serialize(modelWriter);
+	srcLayer2.Serialize(modelWriter);
+	tgtLayer1.Serialize(modelWriter);
+	tgtLayer2.Serialize(modelWriter);
+	modelWriter.close();
+}
+
+void ModelPredict()
+{
+	Vocab vocab;
+	vocab.LoadVocab("l3g.txt");
+	cout << "vocab Size " << vocab.VocabSize << endl;
+	vector<tuple<int *, int>> src_batch, tgt_batch;
+	extractBinaryfromStream("data//test_data_clean.tsv", vocab, src_batch, tgt_batch, 0, 0);
+
+	int sampleSize = src_batch.size();
+	cout << "test sample size" << sampleSize << endl;
+	
+	int miniBatchSize = 1024;
+	int featureDim = vocab.VocabSize;
+	int batchNum = (sampleSize - 1) / miniBatchSize + 1;
+
+	RunnerBehavior rb;
+	rb.RunMode = RUNMODE_PREDICT;
+	rb.Device = DEVICE_GPU;
+	rb.ComputeLib = new CudaOperationManager(true, true);
+	
+	int hiddenDim1 = 128;
+	int hiddenDim2 = 128;
+
+	SparseIndexMatrixStat srcMiniBatchInfo;
+	srcMiniBatchInfo.MAX_ROW_SIZE = miniBatchSize;
+	srcMiniBatchInfo.MAX_COL_SIZE = featureDim;
+	srcMiniBatchInfo.TOTAL_BATCH_NUM = batchNum;
+	srcMiniBatchInfo.TOTAL_SAMPLE_NUM = sampleSize;
+	srcMiniBatchInfo.MAX_ELEMENT_SIZE = batchNum * 256;
+
+	SparseIndexMatrixStat tgtMiniBatchInfo;
+	tgtMiniBatchInfo.MAX_ROW_SIZE = miniBatchSize;
+	tgtMiniBatchInfo.MAX_COL_SIZE = featureDim;
+	tgtMiniBatchInfo.TOTAL_BATCH_NUM = batchNum;
+	tgtMiniBatchInfo.TOTAL_SAMPLE_NUM = sampleSize;
+	tgtMiniBatchInfo.MAX_ELEMENT_SIZE = batchNum * 256;
+
+	DenseMatrixStat OutputLayer1Info;
+	OutputLayer1Info.MAX_ROW_SIZE = miniBatchSize;
+	OutputLayer1Info.MAX_COL_SIZE = hiddenDim1;
+	OutputLayer1Info.TOTAL_BATCH_NUM = batchNum;
+	OutputLayer1Info.TOTAL_SAMPLE_NUM = sampleSize;
+
+	DenseMatrixStat OutputLayer2Info;
+	OutputLayer2Info.MAX_ROW_SIZE = miniBatchSize;
+	OutputLayer2Info.MAX_COL_SIZE = hiddenDim2;
+	OutputLayer2Info.TOTAL_BATCH_NUM = batchNum;
+	OutputLayer2Info.TOTAL_SAMPLE_NUM = sampleSize;
+
+	ifstream modelReader;
+	modelReader.open("model//dssm.model", ofstream::binary);
+	FullyConnectedLayer srcLayer1(modelReader, &rb);
+	FullyConnectedLayer srcLayer2(modelReader, &rb);
+	FullyConnectedLayer tgtLayer1(modelReader, &rb);
+	FullyConnectedLayer tgtLayer2(modelReader, &rb);
+	modelReader.close();
+
+	DenseMatrixStat OutputSimInfo;
+	OutputSimInfo.MAX_ROW_SIZE = miniBatchSize;
+	OutputSimInfo.MAX_COL_SIZE = 1;
+	OutputSimInfo.TOTAL_BATCH_NUM = batchNum;
+	OutputSimInfo.TOTAL_SAMPLE_NUM = sampleSize;
+
+	SparseIndexMatrix srcBatch(&srcMiniBatchInfo, rb.Device);	
+	HiddenDenseMatrix srcLayer1Data(&OutputLayer1Info, rb.Device);
+	HiddenDenseMatrix srcLayer2Data(&OutputLayer2Info, rb.Device);
+
+	SparseIndexMatrix tgtBatch(&tgtMiniBatchInfo, rb.Device);
+	HiddenDenseMatrix tgtLayer1Data(&OutputLayer1Info, rb.Device);
+	HiddenDenseMatrix tgtLayer2Data(&OutputLayer2Info, rb.Device);
+
+	BiMatchData biMatchData(miniBatchSize, 0, rb.Device);
+
+	SimilarityRunner similarityRunner(10, &rb);
+	HiddenDenseMatrix simOutput(&OutputSimInfo, rb.Device);
+	HiddenDenseMatrix probOutput(&OutputSimInfo, rb.Device);
+	
+	ofstream outfile;
+	outfile.open("data//test_data.result", ofstream::out);
+
+	int smpIdx = 0;
+
+	for (int b = 0; b<batchNum; b++)
+	{
+		srcBatch.Refresh();
+		tgtBatch.Refresh();
+			
+		while (smpIdx < sampleSize - 1 && srcBatch.RowSize < miniBatchSize && tgtBatch.RowSize < miniBatchSize)
+		{
+			srcBatch.PushSample(get<0>(src_batch[smpIdx]), get<1>(src_batch[smpIdx]));
+			tgtBatch.PushSample(get<0>(tgt_batch[smpIdx]), get<1>(tgt_batch[smpIdx]));
+			smpIdx++;
+		}
+
+		srcLayer1.Forward(&srcBatch, srcLayer1Data.Output);
+		srcLayer2.Forward(srcLayer1Data.Output, srcLayer2Data.Output);
+
+		tgtLayer1.Forward(&tgtBatch, tgtLayer1Data.Output);
+		tgtLayer2.Forward(tgtLayer1Data.Output, tgtLayer2Data.Output);
+
+		biMatchData.GenerateMatch(srcBatch.RowSize);
+
+		similarityRunner.Forward(srcLayer2Data.Output, tgtLayer2Data.Output, &biMatchData, simOutput.Output);
+			
+		simOutput.Output->Data->QuickWatch();
+
+		//probOutput.Deriv->Data->QuickWatch();
+		for(int i=0;i< srcBatch.RowSize; i++)
+			outfile<<simOutput.Output->Data->HostMem[i]<<endl;
+
+		if((b+1) % 10 == 0) cout<<"mini batch : "<<b+1<<endl;
+	}
+	outfile.close();
+}
+
+
+int main()
+{
+	// DSSM Model Train.
+	// ModelTrain();
+
+	// DSSM Model Predict.
+	// ModelPredict();
 	return 0;
 }

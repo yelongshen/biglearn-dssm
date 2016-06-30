@@ -58,3 +58,27 @@ void BasicUtil::InverseMatchIdx(int* matchIdx, int matchNum, int* inverseSmpIdx,
 			inverseElementIdx[element++] = *it;
 	}
 }
+
+
+
+void BasicUtil::ReadInt(ifstream & mstream, int *integer)
+{
+	mstream.read((char *)integer,sizeof(int));
+}
+
+
+void BasicUtil::ReadFloat(ifstream & mstream, float *float_value)
+{
+	mstream.read((char *)float_value,sizeof(float));
+}
+
+
+void BasicUtil::WriteInt(ofstream &mstream, int * integer)
+{
+	mstream.write((char *)integer,sizeof(int));
+}
+
+void BasicUtil::WriteFloat(ofstream &mstream, float * float_value)
+{
+	mstream.write((char *)float_value,sizeof(float));
+}

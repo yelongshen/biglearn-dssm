@@ -54,7 +54,7 @@ public:
 		switch(Device)
 		{
 			case DEVICE_CPU : free(Mem); break;
-			case DEVICE_GPU : cudaFree(Mem); break;
+			case DEVICE_GPU : cudaFree(Mem); free(HostMem); break;
 		}
 	}
 
@@ -151,6 +151,18 @@ public:
         if(Device == DEVICE_CPU && refPiece.Device == DEVICE_CPU)
         	memcpy ( Mem + offset, refPiece.Mem + refOffset, size * sizeof(T));
     }
+
+	void Serialize(ofstream & modelWriter)
+	{
+		SyncToHost(0, Size);
+		for (int m = 0; m < Size; m++) { BasicUtil::WriteFloat(modelWriter, &HostMem[m]); }
+	}
+
+	void Deserialize(ifstream & modelReader)
+	{
+		for (int m = 0; m < Size; m++) { BasicUtil::ReadFloat(modelReader, &HostMem[m]); }
+		SyncFromHost(0, Size);
+	}
 
 	void QuickWatch()
 	{
