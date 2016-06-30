@@ -58,7 +58,7 @@ $(TARGET_PATH)/DSSM: $(shared_OBJECTS)
 
 $(OBJD)/%.o: %.cpp
 	if ! (test  -d $(OBJD)); then mkdir $(OBJD); fi
-	$(GPP) -o $(OBJD)/main.o $(INCLUDES) -L$(CUDA_LIB_PATH) -lpthread -O3 -c -fPIC main.cpp $(OBJD)/link.o $(LDFLAGS) $(CCFLAGS)
+	$(GPP) -o $@ $(INCLUDES) -L$(CUDA_LIB_PATH) -lpthread -O3 -c -fPIC $< $(OBJD)/link.o $(LDFLAGS) $(CCFLAGS)
 
 $(OBJD)/%.o: %.cu
 	if ! (test  -d $(OBJD)); then mkdir $(OBJD); fi
