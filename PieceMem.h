@@ -15,6 +15,7 @@
 #include <cuda_runtime_api.h>
 #include <cuda_surface_types.h>
 #include <cublas_v2.h>
+#include "util.h"
 
 #pragma comment(lib, "cudart") 
 #pragma comment(lib, "cuda") 
@@ -44,9 +45,15 @@ public:
 			switch(Device)
 			{
 				case DEVICE_CPU: Mem = (T*)malloc(sizeof(T)* Size); HostMem = Mem; break;
-				case DEVICE_GPU: cudaMalloc((void **)&Mem, Size * sizeof(T)); HostMem = (T*)malloc(sizeof(T)* Size); break;
+				case DEVICE_GPU:
+					//cout<<"prepare alloca cuda memory"<<endl; 
+					if(cudaSuccess != cudaMalloc((void **)&Mem, Size * sizeof(T))) 
+						cout<<"cuda malloc error"<<endl;
+					HostMem = (T*)malloc(sizeof(T)* Size); 
+					break;
 			}
 		}
+		Tmp = NULL;
 	}
 
 	~PieceMem()
@@ -64,6 +71,7 @@ public:
 		Device = ref->Device;
 		Mem = ref->Mem + offset;
 		HostMem = ref->HostMem + offset;
+		Tmp = NULL;
 	}
 
 	void Resize(int size)
@@ -166,10 +174,10 @@ public:
 
 	void QuickWatch()
 	{
-		if(Tmp != NULL) free(Tmp);
-		Tmp = new vector<T>(Size);
+		//if(Tmp != NULL) delete Tmp;
+		//Tmp = new vector<T>(Size);
 		SyncToHost(0, Size);
-		for(int i=0;i<Size;i++) (*Tmp)[i] = HostMem[i];
+		//for(int i=0;i<Size;i++) (*Tmp)[i] = HostMem[i];
 	}
 
 	void Zero()

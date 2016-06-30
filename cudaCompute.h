@@ -8,10 +8,11 @@
 #include <cuda_runtime_api.h>
 #include <cuda_surface_types.h>
 #include "device_launch_parameters.h" //device_launch_parameters.h"
-#include <comutil.h>
+//#include <comutil.h>
 #include <stdint.h>
 #include <stdio.h>
 
+#include <cfloat>
 #include <stdlib.h>
 
 #include "cublas_v2.h"

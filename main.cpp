@@ -21,7 +21,7 @@
 using namespace std;
 
 void extractBinaryfromStream(const char * inputStream, Vocab & textHash,
-	vector<tuple<int *, int>> & src_batch, vector<tuple<int *, int>> & tgt_batch, int isFilter, int debugLines)
+		vector < tuple <int *, int > > & src_batch, vector < tuple <int *, int > > & tgt_batch, int isFilter, int debugLines)
 {
 	ifstream infile;
 	infile.open(inputStream, ifstream::in);
@@ -47,9 +47,19 @@ void extractBinaryfromStream(const char * inputStream, Vocab & textHash,
 
 		int src_seg_num = textHash.FeatureExtract((const char **)src_tokens, src_token_num, src_seg, src_fea);
 		int tgt_seg_num = textHash.FeatureExtract((const char **)tgt_tokens, tgt_token_num, tgt_seg, tgt_fea);
-
-		int src_feature_num = src_seg[src_seg_num - 1];
-		int tgt_feature_num = tgt_seg[tgt_seg_num - 1];
+		
+		int src_feature_num = 0; //src_seg[src_seg_num - 1];
+		int tgt_feature_num = 0; //tgt_seg[tgt_seg_num - 1];
+		
+		if(src_seg_num >= 1)
+		{
+		    src_feature_num = src_seg[src_seg_num - 1];
+		}
+		
+		if(tgt_seg_num >= 1)
+		{
+		    tgt_feature_num = tgt_seg[tgt_seg_num - 1];
+		}
 		
 		if(isFilter == 1)
 		{
@@ -73,24 +83,27 @@ void ModelTrain()
 	Vocab vocab;
 	vocab.LoadVocab("l3g.txt");
 	cout << "vocab Size " << vocab.VocabSize << endl;
-	vector<tuple<int *, int>> src_batch, tgt_batch;
+	vector < tuple <int *, int > > src_batch, tgt_batch;
 	extractBinaryfromStream("data//train_data_40k.tsv", vocab, src_batch, tgt_batch, 1, 0);
 
 	int sampleSize = src_batch.size();
 	cout << "train sample size" << sampleSize << endl;
-	
+
 	int iteration = 20;
 	int miniBatchSize = 1024;
 	int featureDim = vocab.VocabSize;
 	int batchNum = sampleSize / miniBatchSize;
 	int nTrial = 4;
 
-	vector<int> shuff(sampleSize);
+	vector <int> shuff(sampleSize);
 
 	RunnerBehavior rb;
 	rb.RunMode = RUNMODE_TRAIN;
 	rb.Device = DEVICE_GPU;
+	cout<<"init cuda computation ...."<<endl;
 	rb.ComputeLib = new CudaOperationManager(true, true);
+	
+	cout<<"init cuda computation done"<<endl;
 	
 	int hiddenDim1 = 128;
 	int hiddenDim2 = 128;
@@ -115,13 +128,13 @@ void ModelTrain()
 	OutputLayer1Info.TOTAL_BATCH_NUM = batchNum;
 	OutputLayer1Info.TOTAL_SAMPLE_NUM = sampleSize;
 
-	
+
 	DenseMatrixStat OutputLayer2Info;
 	OutputLayer2Info.MAX_ROW_SIZE = miniBatchSize;
 	OutputLayer2Info.MAX_COL_SIZE = hiddenDim2;
 	OutputLayer2Info.TOTAL_BATCH_NUM = batchNum;
 	OutputLayer2Info.TOTAL_SAMPLE_NUM = sampleSize;
-	
+
 
 	FullyConnectedLayer srcLayer1(featureDim, hiddenDim1, &rb);
 	FullyConnectedLayer srcLayer2(hiddenDim1, hiddenDim2, &rb);
@@ -148,13 +161,14 @@ void ModelTrain()
 	SimilarityRunner similarityRunner(10, &rb);
 	HiddenDenseMatrix simOutput(&OutputSimInfo, rb.Device);
 	HiddenDenseMatrix probOutput(&OutputSimInfo, rb.Device);
-	
-	probOutput.Deriv->Data->Zero();
 
+	probOutput.Deriv->Data->Zero();
+	
+	cout<<"start training iteration"<<endl;
 	for (int iter = 0; iter<iteration; iter++)
 	{
 		for (int i = 0; i<sampleSize; i++) shuff[i] = i;
-		
+
 		int shuffIdx = 0;
 
 		float avgLoss = 0;
@@ -162,7 +176,7 @@ void ModelTrain()
 		{
 			srcBatch.Refresh();
 			tgtBatch.Refresh();
-			
+
 			while (shuffIdx < sampleSize - 1 && srcBatch.RowSize < miniBatchSize && tgtBatch.RowSize < miniBatchSize)
 			{
 				int p = shuffIdx + rand() % (sampleSize - shuffIdx);
@@ -174,26 +188,24 @@ void ModelTrain()
 				srcBatch.PushSample(get<0>(src_batch[smpIdx]), get<1>(src_batch[smpIdx]));
 				tgtBatch.PushSample(get<0>(tgt_batch[smpIdx]), get<1>(tgt_batch[smpIdx]));
 			}
-
 			srcLayer1.Forward(&srcBatch, srcLayer1Data.Output);
 			srcLayer2.Forward(srcLayer1Data.Output, srcLayer2Data.Output);
 
 			tgtLayer1.Forward(&tgtBatch, tgtLayer1Data.Output);
 			tgtLayer2.Forward(tgtLayer1Data.Output, tgtLayer2Data.Output);
-
+			
 			biMatchData.GenerateMatch(srcBatch.RowSize);
-
+			
 			//srcLayer2Data.Output->Data->SyncToHost(0, srcLayer2Data.Stat->MAX_COL_SIZE * srcBatch.RowSize);
 			//tgtLayer2Data.Output->Data->SyncToHost(0, tgtLayer2Data.Stat->MAX_COL_SIZE * tgtBatch.RowSize);
 
 			similarityRunner.Forward(srcLayer2Data.Output, tgtLayer2Data.Output, &biMatchData, simOutput.Output);
 			rb.ComputeLib->SoftmaxForward(simOutput.Output->Data, probOutput.Output->Data, srcBatch.RowSize, simOutput.Stat->MAX_COL_SIZE);
-			
+
 			/// log softmax backward.  probOutput.Deriv->Data  --> biMatchData.MatchInfo
 			rb.ComputeLib->VecAdd(probOutput.Output->Data, -1, biMatchData.MatchInfo, 1, simOutput.Deriv->Data, 0, biMatchData.MatchSize);
 
 			//rb.ComputeLib->SoftmaxBackward(probOutput.Output->Data, probOutput.Deriv->Data, simOutput.Deriv->Data, srcBatch.RowSize, probOutput.Stat->MAX_COL_SIZE);
-
 			/// output Loss.
 			float loss = 0;
 			//simOutput.Output->Data->QuickWatch();
@@ -201,13 +213,16 @@ void ModelTrain()
 			probOutput.Output->Data->QuickWatch();
 			//probOutput.Deriv->Data->QuickWatch();
 			for(int i=0;i< srcBatch.RowSize; i++)
-				 loss += logf(probOutput.Output->Data->HostMem[i * probOutput.Stat->MAX_COL_SIZE] + LARGEEPS);
+			{
+				loss += logf(probOutput.Output->Data->HostMem[i * probOutput.Stat->MAX_COL_SIZE] + LARGEEPS);
+			}
 			loss = loss / srcBatch.RowSize;
 			avgLoss = b * 1.0f / (b + 1) * avgLoss + 1.0f / (b + 1) * loss;
 
 			if((b+1) % 10 == 0) cout<<"mini batch : "<<b+1<<"\t avg loss :"<<avgLoss<<endl;
-
+			cout<<"current loss "<<loss<<endl;
 			similarityRunner.Backward(simOutput.Deriv, srcLayer2Data.Deriv, tgtLayer2Data.Deriv);
+
 
 			tgtLayer2.Backward(tgtLayer2Data.Deriv, tgtLayer2Data.Output, tgtLayer1Data.Deriv);
 			tgtLayer1.Backward(tgtLayer1Data.Deriv, tgtLayer1Data.Output);
@@ -225,9 +240,9 @@ void ModelTrain()
 		cout<<"iteration : "<<iter + 1<<"\t avg loss :"<<avgLoss<<endl;
 
 	}
-	
+
 	ofstream modelWriter;
-	modelWriter.open("model//dssm.model", ofstream::binary);
+	modelWriter.open("model//dssm.v2.model", ofstream::binary);
 	srcLayer1.Serialize(modelWriter);
 	srcLayer2.Serialize(modelWriter);
 	tgtLayer1.Serialize(modelWriter);
@@ -240,12 +255,12 @@ void ModelPredict()
 	Vocab vocab;
 	vocab.LoadVocab("l3g.txt");
 	cout << "vocab Size " << vocab.VocabSize << endl;
-	vector<tuple<int *, int>> src_batch, tgt_batch;
+	vector < tuple <int *, int > > src_batch, tgt_batch;
 	extractBinaryfromStream("data//test_data_clean.tsv", vocab, src_batch, tgt_batch, 0, 0);
 
 	int sampleSize = src_batch.size();
 	cout << "test sample size" << sampleSize << endl;
-	
+
 	int miniBatchSize = 1024;
 	int featureDim = vocab.VocabSize;
 	int batchNum = (sampleSize - 1) / miniBatchSize + 1;
@@ -253,8 +268,8 @@ void ModelPredict()
 	RunnerBehavior rb;
 	rb.RunMode = RUNMODE_PREDICT;
 	rb.Device = DEVICE_GPU;
+
 	rb.ComputeLib = new CudaOperationManager(true, true);
-	
 	int hiddenDim1 = 128;
 	int hiddenDim2 = 128;
 
@@ -311,9 +326,9 @@ void ModelPredict()
 	SimilarityRunner similarityRunner(10, &rb);
 	HiddenDenseMatrix simOutput(&OutputSimInfo, rb.Device);
 	HiddenDenseMatrix probOutput(&OutputSimInfo, rb.Device);
-	
+
 	ofstream outfile;
-	outfile.open("data//test_data.result", ofstream::out);
+	outfile.open("data//test_data.v2.result", ofstream::out);
 
 	int smpIdx = 0;
 
@@ -321,7 +336,7 @@ void ModelPredict()
 	{
 		srcBatch.Refresh();
 		tgtBatch.Refresh();
-			
+
 		while (smpIdx < sampleSize - 1 && srcBatch.RowSize < miniBatchSize && tgtBatch.RowSize < miniBatchSize)
 		{
 			srcBatch.PushSample(get<0>(src_batch[smpIdx]), get<1>(src_batch[smpIdx]));
@@ -338,7 +353,7 @@ void ModelPredict()
 		biMatchData.GenerateMatch(srcBatch.RowSize);
 
 		similarityRunner.Forward(srcLayer2Data.Output, tgtLayer2Data.Output, &biMatchData, simOutput.Output);
-			
+
 		simOutput.Output->Data->QuickWatch();
 
 		//probOutput.Deriv->Data->QuickWatch();
@@ -350,13 +365,34 @@ void ModelPredict()
 	outfile.close();
 }
 
+void TestCuda()
+{
+	PieceMem<float> * a = new PieceMem<float>(100, DEVICE_GPU);
+	for(int i=0;i<100;i++)
+	{
+		a->HostMem[i] = i;
+	}
+	a->SyncFromHost(0, 100);
+	
+	
+	CudaOperationManager ComputeLib(true, true);
+	
+	ComputeLib.Scale(a, 10, 100);
+	
+	a->SyncToHost(0, 100);
+	for(int i=0;i<100;i++)
+	{
+		cout<<a->HostMem[i]<<endl;
+	}
+}
 
 int main()
 {
+	//TestCuda();	
 	// DSSM Model Train.
-	// ModelTrain();
+	ModelTrain();
 
 	// DSSM Model Predict.
-	// ModelPredict();
+	//ModelPredict();
 	return 0;
 }

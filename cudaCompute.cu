@@ -6,7 +6,7 @@
 #include <cuda_runtime_api.h>
 #include <cuda_surface_types.h>
 #include "device_launch_parameters.h" //device_launch_parameters.h"
-#include <comutil.h>
+//#include <comutil.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -16,9 +16,9 @@
 
 #include "device_functions.h"
 
-#include <windows.h>
+//#include <windows.h>
 #include <fstream>
-
+#include <cfloat>
 #include "cublas_v2.h"
 #include "cudaCompute.h"
 
@@ -26,7 +26,7 @@
 #pragma comment(lib,"cublas.lib")
 
 using namespace std;
-using namespace _com_util;
+//using namespace _com_util;
 
 
 __global__ void cuda_SparseIndexForward(int * rowIdx, int * sparseColIndex, float * weight, int rowSize, int inputDim, int outputDim, float * output, float alpha, float beta)

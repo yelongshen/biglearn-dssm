@@ -1,6 +1,7 @@
 //util.cpp
 
 #include <vector>
+#include <string.h>
 #include "util.h"
 
 char** BasicUtil::TokenizeString(string sentence, int & token_num, int max_token_num, int max_token_len)

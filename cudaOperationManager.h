@@ -8,7 +8,7 @@
 #include <cuda_runtime_api.h>
 #include <cuda_surface_types.h>
 #include "device_launch_parameters.h" //device_launch_parameters.h"
-#include <comutil.h>
+//#include <comutil.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -30,8 +30,9 @@
 #pragma comment(lib, "cudnn")
 #pragma comment(lib,"cublas.lib")
 
+#include <cfloat>
 using namespace std;
-using namespace _com_util;
+//using namespace _com_util;
 
 
 class CudaOperationManager : public IMathOperationManager
@@ -161,6 +162,8 @@ public:
 
 		if (IsCuDNN) cublasCreate(&cublasHandle);
 		if (IsCuBlas) cudnnCreate(&cuDnnHandle);
+		if(cublasHandle == NULL) cout<<"cublas init error"<<endl;
+		if(cuDnnHandle == NULL) cout<<"cuDNN init error"<<endl;
 	}
 
 	virtual ~CudaOperationManager()

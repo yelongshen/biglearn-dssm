@@ -17,6 +17,8 @@ class SimilarityRunner
 public:
 	SimilarityRunner(float gamma, RunnerBehavior * rb)
 	{
+		ASquare = NULL;
+		BSquare = NULL;
 		Gamma = gamma;
 		RB = rb;
 	}
@@ -59,8 +61,10 @@ public:
 
 	~SimilarityRunner()
 	{
-		if (ASquare != NULL) free(ASquare);
-		if (BSquare != NULL) free(BSquare);
+		if (ASquare != NULL) delete ASquare;
+		if (BSquare != NULL) delete BSquare;
+		ASquare = NULL;
+		BSquare = NULL;
 	}
 private:
 	PieceMem<float> * ASquare;
