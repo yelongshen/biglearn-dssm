@@ -1,54 +1,75 @@
-PROJECT := biglearn
+# Location of the CUDA Toolkit binaries and libraries
+CUDA_80_PATH   ?= /usr/local/cuda-8.0
+CUDA_75_PATH   ?= /usr/local/cuda-7.5
+CUDA_65_PATH   ?= /usr/local/cuda-6.5
+CUDA_DRIVER_PATH ?= /usr/lib/x86_64-linux-gnu
 
-NVCC := nvcc
-CXX := g++
+ifeq ($(wildcard /usr/local/cuda-8.0/nvcc),)
+	CUDA_PATH ?= /usr/local/cuda-8.0
+else ifeq ($(wildcard /usr/local/cuda-7.5/nvcc),)
+	CUDA_PATH ?= /usr/local/cuda-7.5
+else ifeq ($(wildcard /usr/local/cuda-6.5/nvcc),)
+	CUDA_PATH ?= /usr/local/cuda-6.5
+endif
 
-ARCH := $(shell getconf LONG_BIT)
-
-CUDA_PATH ?= /usr/local/cuda
-LIB_FLAGS_32 := -L$(CUDA_PATH)/lib
-LIB_FLAGS_64 := -L$(CUDA_PATH)/lib64
-LIB_FLAGS := $(LIB_FLAGS_64)
-
-CUDA_DIR := /usr/local/cuda
-
-# Flags passed to the C++ compiler.
-CXXFLAGS += -g -Wextra -pthread --std=c++11
-
-# Flags passed to nvcc compiler.
-NVCCFLAGS += -g -arch=sm_30 --std=c++11 --expt-extended-lambda
-
-
-all: example clean
+CUDA_VERSION  ?= $(shell $(CUDA_PATH)/nvcc --version  | grep "release" | sed 's/.*release \([0-9\.]*\),.*/\1/g')
 	
-#-L/usr/local/cuda/lib64 -lcudart 
-#-I/usr/local/cuda/include 
-example: example.o vocab.o cudaPiece.o sparseMatrixData.o
-	$(NVCC) -I/usr/local/cuda/include  -L/usr/local/cuda/lib64 -lcudart  -o example example.o vocab.o cudaPiece.o sparseMatrixData.o
+CUDA_INC_PATH   ?= $(CUDA_PATH)/include
+CUDA_BIN_PATH   ?= $(CUDA_PATH)/bin
+CUDA_LIB_PATH  ?= $(CUDA_PATH)/lib64
+CUDNN_PATH		?= /usr/local/cudnn-2.0
 
-example.o: example.cpp vocab.h cudaPiece.h
-	$(CXX) -c $(CXXFLAGS) -I/usr/local/cuda/include  -L/usr/local/cuda/lib64 -lcudart  example.cpp
+# Common binaries
+NVCC            ?= $(CUDA_BIN_PATH)/nvcc
+GPP             ?= g++
+GCC				?= gcc
 
-vocab.o: vocab.cpp vocab.h
-	$(CXX) -c $(CXXFLAGS) -I/usr/local/cuda/include  -L/usr/local/cuda/lib64 -lcudart  vocab.cpp vocab.h
+# Extra user flags
+EXTRA_NVCCFLAGS ?=
+EXTRA_LDFLAGS   ?=
 
-cudaPiece.o: cudaPiece.cpp cudaPiece.h
-	$(CXX) -c $(CXXFLAGS) -I/usr/local/cuda/include  -L/usr/local/cuda/lib64 -lcudart  cudaPiece.cpp cudaPiece.h
+# CUDA code generation flags
+GENCODE_SM50    := -gencode arch=compute_50,code=sm_50
+GENCODE_FLAGS   :=  $(GENCODE_SM50) 
+CCFLAGS   += -m64 -g
+NVCCFLAGS := -m64 -g -Xcompiler -fPIC
+OBJD =	./obj
+TARGET_PATH = ./bin
 
-sparseMatrixData.o : sparseMatrixData.cpp sparseMatrixData.h
-	$(CXX) -c $(CXXFLAGS) -I/usr/local/cuda/include  -L/usr/local/cuda/lib64 -lcudart  sparseMatrixData.cpp sparseMatrixData.h
 
-util.o : util.cpp
-	$(CXX) -c $(CXXFLAGS) -I/usr/local/cuda/include  -L/usr/local/cuda/lib64 -lcudart  util.cpp
+# Common includes and paths for CUDA
+INCLUDES      := -I$(CUDA_INC_PATH) -I. -I.. -I$(CUDA_PATH)/samples/common/inc -I./headers/cuda -I$(CUDNN_PATH)
+LDFLAGS   :=  -L$(CUDNN_PATH) -lcudnn -L$(CUDA_LIB_PATH) -lcudadevrt -lcublas -L$(CUDA_DRIVER_PATH) -lcuda
+
+LINK_OBJECTS = $(OBJD)/cudaCompute.o 
+#$(OBJD)/activation.o $(OBJD)/bplda.o $(OBJD)/cudacal.o $(OBJD)/LBFGS.o $(OBJD)/lstm.o $(OBJD)/matrix.o $(OBJD)/optlstm.o $(OBJD)/rnn.o
+
+shared_OBJECTS = $(OBJD)/main.o $(OBJD)/denseMatrixData.o $(OBJD)/PieceMem.o $(OBJD)/sparseMatrixData.o $(OBJD)/util.o $(OBJD)/vocab.o $(OBJD)/link.o $(LINK_OBJECTS)
+
+# Target rules
+all: $(TARGET_PATH)/DSSM
+#libCudalib.so	
+
+$(TARGET_PATH)/DSSM: $(shared_OBJECTS) 
+	if ! (test -d $(TARGET_PATH)); then  mkdir $(TARGET_PATH); fi
+	$(GPP) -o $(TARGET_PATH)/DSSM -lm -lpthread  $(shared_OBJECTS) $(LDFLAGS) $(CCFLAGS) $(CUDA_LIB_PATH)/libcudart_static.a
+
+##-shared -fPIC
+
+$(OBJD)/%.o: %.cpp
+	if ! (test  -d $(OBJD)); then mkdir $(OBJD); fi
+	$(GPP) -o $(OBJD)/main.o $(INCLUDES) -L$(CUDA_LIB_PATH) -lpthread -O3 -c -fPIC main.cpp $(OBJD)/link.o $(LDFLAGS) $(CCFLAGS)
+
+$(OBJD)/%.o: %.cu
+	if ! (test  -d $(OBJD)); then mkdir $(OBJD); fi
+	$(NVCC) -O3 -c -o $@ $< $(GENCODE_SM50) $(LDFLAGS) $(NVCCFLAGS)
+	
+$(OBJD)/link.o: $(LINK_OBJECTS)
+	$(NVCC) -o $(OBJD)/link.o -dlink $(LINK_OBJECTS) $(GENCODE_SM50) $(LDFLAGS) $(NVCCFLAGS)
 
 
-.PHONY: clean
+
 clean:
-	rm -rf *.o
-
-
-
-#-o example
-
-#example.o: example.cpp
-#		$(CXX) -c $(CXXFLAGS) -o example
+	test -d $(OBJD) && rm -r $(OBJD)
+	test -d $(TARGET_PATH) && rm -r $(TARGET_PATH)
+	#rm $(OBJD)/*.o $(TARGET_PATH)/*.so
