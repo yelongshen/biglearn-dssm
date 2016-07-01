@@ -159,11 +159,14 @@ public:
 	{
 		IsCuDNN = isCuDNN;
 		IsCuBlas = isCuBlas;
-
+		cublasHandle = NULL;
+		cuDnnHandle = NULL;
 		if (IsCuDNN) cublasCreate(&cublasHandle);
 		if (IsCuBlas) cudnnCreate(&cuDnnHandle);
 		if(cublasHandle == NULL) cout<<"cublas init error"<<endl;
 		if(cuDnnHandle == NULL) cout<<"cuDNN init error"<<endl;
+		cout<<"cublas handle"<<cublasHandle<<endl;
+		cout<<"cudnn handle"<<cuDnnHandle<<endl;
 	}
 
 	virtual ~CudaOperationManager()

@@ -63,13 +63,9 @@ void extractBinaryfromStream(const char * inputStream, Vocab & textHash,
 		
 		if(isFilter == 1)
 		{
-			if(src_feature_num <= 0 || tgt_feature_num <= 0) continue;
+		    if(src_feature_num <= 0 || tgt_feature_num <= 0) continue;
 		}
-		else
-		{
-			if(src_feature_num <= 0) src_feature_num = 0;
-			if(tgt_feature_num <= 0) tgt_feature_num = 0;
-		}
+		
 		src_batch.push_back(tuple<int*, int>(src_fea, src_feature_num));
 		tgt_batch.push_back(tuple<int*, int>(tgt_fea, tgt_feature_num));
 
@@ -89,7 +85,7 @@ void ModelTrain()
 	int sampleSize = src_batch.size();
 	cout << "train sample size" << sampleSize << endl;
 
-	int iteration = 20;
+	int iteration = 30;
 	int miniBatchSize = 1024;
 	int featureDim = vocab.VocabSize;
 	int batchNum = sampleSize / miniBatchSize;
@@ -113,14 +109,14 @@ void ModelTrain()
 	srcMiniBatchInfo.MAX_COL_SIZE = featureDim;
 	srcMiniBatchInfo.TOTAL_BATCH_NUM = batchNum;
 	srcMiniBatchInfo.TOTAL_SAMPLE_NUM = sampleSize;
-	srcMiniBatchInfo.MAX_ELEMENT_SIZE = batchNum * 256;
+	srcMiniBatchInfo.MAX_ELEMENT_SIZE = miniBatchSize * 256;
 
 	SparseIndexMatrixStat tgtMiniBatchInfo;
 	tgtMiniBatchInfo.MAX_ROW_SIZE = miniBatchSize;
 	tgtMiniBatchInfo.MAX_COL_SIZE = featureDim;
 	tgtMiniBatchInfo.TOTAL_BATCH_NUM = batchNum;
 	tgtMiniBatchInfo.TOTAL_SAMPLE_NUM = sampleSize;
-	tgtMiniBatchInfo.MAX_ELEMENT_SIZE = batchNum * 256;
+	tgtMiniBatchInfo.MAX_ELEMENT_SIZE = miniBatchSize * 256;
 
 	DenseMatrixStat OutputLayer1Info;
 	OutputLayer1Info.MAX_ROW_SIZE = miniBatchSize;
@@ -164,6 +160,8 @@ void ModelTrain()
 
 	probOutput.Deriv->Data->Zero();
 	
+	//iteration = 1;
+	
 	cout<<"start training iteration"<<endl;
 	for (int iter = 0; iter<iteration; iter++)
 	{
@@ -188,7 +186,37 @@ void ModelTrain()
 				srcBatch.PushSample(get<0>(src_batch[smpIdx]), get<1>(src_batch[smpIdx]));
 				tgtBatch.PushSample(get<0>(tgt_batch[smpIdx]), get<1>(tgt_batch[smpIdx]));
 			}
+			//cout<<"src batch row "<< srcBatch.RowSize<<endl;
+			//cout<<"src element size " <<srcBatch.ElementSize<<endl; 
+			//cout<<"tgt batch row "<< tgtBatch.RowSize<<endl;
+			//cout<<"tgt element size " <<tgtBatch.ElementSize<<endl; 
+			
+			//srcLayer1.Weight->SyncToHost(0, 100);
+			//tgtLayer1.Weight->SyncToHost(0, 100);
+			
+			//for(int i=0;i<100;i++)
+			//{
+			 //   cout<<"smpIdx "<< src.Weight->HostMem[i]<<endl;
+			//}
+			
+			
+			
+			//cout<<"src weight "<<srcLayer1.Weight->HostMem[0]<<endl;
+			//cout<<"tgt weight "<<tgtLayer1.Weight->HostMem[0]<<endl;
+			
+			//for(int i = 0; i< srcBatch.ElementSize; i++)
+			//{
+			//	srcBatch.SampleIdx
+			//}
+			//if( cudaSuccess != cudaGetLastError())
+			//	cout <<"error 1"<<endl;
+
 			srcLayer1.Forward(&srcBatch, srcLayer1Data.Output);
+			//if( cudaSuccess != cudaGetLastError())
+			//	cout <<"fdsfasdf"<<endl;
+			//srcLayer1Data.Output->Data->SyncToHost(0,100);
+			//cout<<"src 1 output"<<srcLayer1Data.Output->Data->HostMem[0]<<endl;
+			
 			srcLayer2.Forward(srcLayer1Data.Output, srcLayer2Data.Output);
 
 			tgtLayer1.Forward(&tgtBatch, tgtLayer1Data.Output);
@@ -198,10 +226,20 @@ void ModelTrain()
 			
 			//srcLayer2Data.Output->Data->SyncToHost(0, srcLayer2Data.Stat->MAX_COL_SIZE * srcBatch.RowSize);
 			//tgtLayer2Data.Output->Data->SyncToHost(0, tgtLayer2Data.Stat->MAX_COL_SIZE * tgtBatch.RowSize);
-
+			
+			//cout<<"src output"<<srcLayer2Data.Output->Data->HostMem[0]<<endl;
+			//cout<<"tgt output"<<tgtLayer2Data.Output->Data->HostMem[0]<<endl;
+			
 			similarityRunner.Forward(srcLayer2Data.Output, tgtLayer2Data.Output, &biMatchData, simOutput.Output);
-			rb.ComputeLib->SoftmaxForward(simOutput.Output->Data, probOutput.Output->Data, srcBatch.RowSize, simOutput.Stat->MAX_COL_SIZE);
 
+			//simOutput.Output->Data->SyncToHost(0, srcBatch.RowSize * 5);
+			//for(int i=0;i<srcBatch.RowSize;i++)
+			//{
+			//	cout<<"sim"<< simOutput.Output->Data->HostMem[i]<<endl;
+			//	break;
+			//}
+			//break;				
+			rb.ComputeLib->SoftmaxForward(simOutput.Output->Data, probOutput.Output->Data, srcBatch.RowSize, simOutput.Stat->MAX_COL_SIZE);
 			/// log softmax backward.  probOutput.Deriv->Data  --> biMatchData.MatchInfo
 			rb.ComputeLib->VecAdd(probOutput.Output->Data, -1, biMatchData.MatchInfo, 1, simOutput.Deriv->Data, 0, biMatchData.MatchSize);
 
@@ -210,17 +248,19 @@ void ModelTrain()
 			float loss = 0;
 			//simOutput.Output->Data->QuickWatch();
 			//simOutput.Deriv->Data->QuickWatch();
-			probOutput.Output->Data->QuickWatch();
+			probOutput.Output->Data->SyncToHost(0, srcBatch.RowSize * probOutput.Stat->MAX_COL_SIZE); //  ->QuickWatch();
 			//probOutput.Deriv->Data->QuickWatch();
 			for(int i=0;i< srcBatch.RowSize; i++)
 			{
+				//cout<< probOutput.Output->Data->HostMem[i * probOutput.Stat->MAX_COL_SIZE]<<endl;
+
 				loss += logf(probOutput.Output->Data->HostMem[i * probOutput.Stat->MAX_COL_SIZE] + LARGEEPS);
 			}
 			loss = loss / srcBatch.RowSize;
 			avgLoss = b * 1.0f / (b + 1) * avgLoss + 1.0f / (b + 1) * loss;
 
 			if((b+1) % 10 == 0) cout<<"mini batch : "<<b+1<<"\t avg loss :"<<avgLoss<<endl;
-			cout<<"current loss "<<loss<<endl;
+			//cout<<"current loss "<<loss<<endl;
 			similarityRunner.Backward(simOutput.Deriv, srcLayer2Data.Deriv, tgtLayer2Data.Deriv);
 
 
@@ -278,14 +318,14 @@ void ModelPredict()
 	srcMiniBatchInfo.MAX_COL_SIZE = featureDim;
 	srcMiniBatchInfo.TOTAL_BATCH_NUM = batchNum;
 	srcMiniBatchInfo.TOTAL_SAMPLE_NUM = sampleSize;
-	srcMiniBatchInfo.MAX_ELEMENT_SIZE = batchNum * 256;
+	srcMiniBatchInfo.MAX_ELEMENT_SIZE = miniBatchSize * 256;
 
 	SparseIndexMatrixStat tgtMiniBatchInfo;
 	tgtMiniBatchInfo.MAX_ROW_SIZE = miniBatchSize;
 	tgtMiniBatchInfo.MAX_COL_SIZE = featureDim;
 	tgtMiniBatchInfo.TOTAL_BATCH_NUM = batchNum;
 	tgtMiniBatchInfo.TOTAL_SAMPLE_NUM = sampleSize;
-	tgtMiniBatchInfo.MAX_ELEMENT_SIZE = batchNum * 256;
+	tgtMiniBatchInfo.MAX_ELEMENT_SIZE = miniBatchSize * 256;
 
 	DenseMatrixStat OutputLayer1Info;
 	OutputLayer1Info.MAX_ROW_SIZE = miniBatchSize;
@@ -300,7 +340,7 @@ void ModelPredict()
 	OutputLayer2Info.TOTAL_SAMPLE_NUM = sampleSize;
 
 	ifstream modelReader;
-	modelReader.open("model//dssm.model", ofstream::binary);
+	modelReader.open("model//dssm.v2.model", ofstream::binary);
 	FullyConnectedLayer srcLayer1(modelReader, &rb);
 	FullyConnectedLayer srcLayer2(modelReader, &rb);
 	FullyConnectedLayer tgtLayer1(modelReader, &rb);
@@ -368,31 +408,47 @@ void ModelPredict()
 void TestCuda()
 {
 	PieceMem<float> * a = new PieceMem<float>(100, DEVICE_GPU);
+	PieceMem<float> * b = new PieceMem<float>(100, DEVICE_GPU);
 	for(int i=0;i<100;i++)
 	{
-		a->HostMem[i] = i;
+		a->HostMem[i] = 0; //i * 0.1f;
+		b->HostMem[i] = 0;	
 	}
 	a->SyncFromHost(0, 100);
-	
+	b->SyncFromHost(0, 100);
 	
 	CudaOperationManager ComputeLib(true, true);
 	
-	ComputeLib.Scale(a, 10, 100);
+	ComputeLib.Scale(a, 0.1f, 100);
 	
+	ComputeLib.SoftmaxForward(a, b, 10, 10);
 	a->SyncToHost(0, 100);
+	b->SyncToHost(0, 100);
 	for(int i=0;i<100;i++)
 	{
 		cout<<a->HostMem[i]<<endl;
+		cout<<b->HostMem[i]<<endl;
 	}
 }
 
-int main()
+int main(int argc, char* argv[])
 {
-	//TestCuda();	
-	// DSSM Model Train.
-	ModelTrain();
-
-	// DSSM Model Predict.
-	//ModelPredict();
+	//cout <<argc<<argv[0]<<endl;
+	if(argc <= 1)
+	{
+	    cout<<"argv : -train : training; -predict : testing;"<<endl;
+	    return 0;
+	}
+	if(strcmp(argv[1], "-train") == 0)
+	{
+	    //TestCuda();	
+	    // DSSM Model Train.
+		ModelTrain();
+	}
+	else if(strcmp(argv[1],"-predict") == 0)
+	{
+		// DSSM Model Predict.
+		ModelPredict();
+	}
 	return 0;
 }

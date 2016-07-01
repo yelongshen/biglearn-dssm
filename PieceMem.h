@@ -89,13 +89,14 @@ public:
 					HostMem = newMem;
 					break;
 			case DEVICE_GPU : 
-					cudaMalloc((void **)&newMem, sizeof(T) * size);
+					if(cudaSuccess !=  cudaMalloc((void **)&newMem, sizeof(T) * size))
+						cout<<"Cuda Malloc Fail"<<endl;
 					cudaMemset(newMem, 0, size * sizeof(T)); 
 					cudaMemcpy(newMem, Mem, miniSize * sizeof(T), cudaMemcpyDeviceToDevice);
 					cudaFree(Mem);
-
 					free(HostMem);
 					HostMem = (T*)malloc(sizeof(T)* size);
+					//cout<<"resize"<<endl;
 					break;
 		}
 		Mem = newMem;

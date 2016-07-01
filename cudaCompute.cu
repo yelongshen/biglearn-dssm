@@ -43,7 +43,8 @@ __global__ void cuda_SparseIndexForward(int * rowIdx, int * sparseColIndex, floa
 		for (int i = fea_begin; i < fea_end; ++i)
 		{
 			int fea_idx = sparseColIndex[i];
-			sum += weight[fea_idx * outputDim + idy];
+			if(fea_idx < inputDim)
+				sum += weight[fea_idx * outputDim + idy];
 		}
 		output[idx * outputDim + idy] = alpha * output[idx * outputDim + idy] + beta * sum;
 	}
