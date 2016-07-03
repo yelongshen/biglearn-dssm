@@ -377,7 +377,7 @@ void ModelPredict()
 		srcBatch.Refresh();
 		tgtBatch.Refresh();
 
-		while (smpIdx < sampleSize - 1 && srcBatch.RowSize < miniBatchSize && tgtBatch.RowSize < miniBatchSize)
+		while (smpIdx < sampleSize && srcBatch.RowSize < miniBatchSize && tgtBatch.RowSize < miniBatchSize)
 		{
 			srcBatch.PushSample(get<0>(src_batch[smpIdx]), get<1>(src_batch[smpIdx]));
 			tgtBatch.PushSample(get<0>(tgt_batch[smpIdx]), get<1>(tgt_batch[smpIdx]));
@@ -399,8 +399,9 @@ void ModelPredict()
 		//probOutput.Deriv->Data->QuickWatch();
 		for(int i=0;i< srcBatch.RowSize; i++)
 			outfile<<simOutput.Output->Data->HostMem[i]<<endl;
-
-		if((b+1) % 10 == 0) cout<<"mini batch : "<<b+1<<endl;
+		//cout<<srcBatch.RowSize<<"\t"<<smpIdx<<endl;
+		
+		if((b+1) % 10 == 0) cout<<"mini batch : "<<b+1<<" sample number "<<smpIdx<<endl;
 	}
 	outfile.close();
 }
