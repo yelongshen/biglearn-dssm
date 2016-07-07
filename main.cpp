@@ -5,6 +5,7 @@
 #include <tuple>
 #include <cstdlib>
 #include <time.h>
+#include <sys/time.h>
 
 #include "util.h"
 #include "vocab.h"
@@ -161,8 +162,16 @@ void ModelTrain()
 	probOutput.Deriv->Data->Zero();
 	
 	//iteration = 1;
-	
 	cout<<"start training iteration"<<endl;
+	
+	double train_time = 0;
+	double io_time = 0;
+		
+	struct timeval train_start, train_end;
+	struct timeval io_start, io_end;
+	
+	gettimeofday(&train_start, 0);
+	
 	for (int iter = 0; iter<iteration; iter++)
 	{
 		for (int i = 0; i<sampleSize; i++) shuff[i] = i;
@@ -172,6 +181,8 @@ void ModelTrain()
 		float avgLoss = 0;
 		for (int b = 0; b<batchNum; b++)
 		{
+			gettimeofday(&io_start, 0);
+
 			srcBatch.Refresh();
 			tgtBatch.Refresh();
 
@@ -186,6 +197,12 @@ void ModelTrain()
 				srcBatch.PushSample(get<0>(src_batch[smpIdx]), get<1>(src_batch[smpIdx]));
 				tgtBatch.PushSample(get<0>(tgt_batch[smpIdx]), get<1>(tgt_batch[smpIdx]));
 			}
+			
+			gettimeofday(&io_end, 0);
+			
+			io_time += io_end.tv_sec - io_start.tv_sec;
+			
+			
 			//cout<<"src batch row "<< srcBatch.RowSize<<endl;
 			//cout<<"src element size " <<srcBatch.ElementSize<<endl; 
 			//cout<<"tgt batch row "<< tgtBatch.RowSize<<endl;
@@ -210,7 +227,8 @@ void ModelTrain()
 			//}
 			//if( cudaSuccess != cudaGetLastError())
 			//	cout <<"error 1"<<endl;
-
+			
+			
 			srcLayer1.Forward(&srcBatch, srcLayer1Data.Output);
 			//if( cudaSuccess != cudaGetLastError())
 			//	cout <<"fdsfasdf"<<endl;
@@ -280,7 +298,14 @@ void ModelTrain()
 		cout<<"iteration : "<<iter + 1<<"\t avg loss :"<<avgLoss<<endl;
 
 	}
-
+	
+	gettimeofday(&train_end, 0);
+	
+	train_time = (train_end.tv_sec - train_start.tv_sec);
+			
+	cout<<"train overall time elipsed (sec):"<<train_time<<endl;
+	cout<<"io time elipsed (sec):"<<io_time<<endl;
+	cout<<"gpu time elipsed (sec):"<<train_time - io_time<<endl;
 	ofstream modelWriter;
 	modelWriter.open("model//dssm.v2.model", ofstream::binary);
 	srcLayer1.Serialize(modelWriter);
